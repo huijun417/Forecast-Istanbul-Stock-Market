@@ -1,0 +1,116 @@
+---
+title: "146 Project"
+author: "Changxin Xie"
+date: "11/28/2019"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+#Question 1
+library(TSA)
+library(tseries)
+library(readxl)
+#Plot the data
+data_akbilgic <- read_excel("E:/homework/STAT146/groupproject/data_akbilgic.xlsx")
+ISE.index <- data_akbilgic$ISE_USD
+plot(ISE.index,xlab="day", ylab="Return on Stock of Istanbul Stock Exchange ", type='o', main = "Return rate of Istanbul Index")
+#It seems that variance is constant; there are a few outliers in the plot and the time series appear to have no trend.
+```
+
+```{r}
+#Question 2
+#Since the variance of the data is constant, we do not need to use transformation to stablized the variance
+BoxCox.ar(ISE.index+1, lambda = seq(-2,5,0.1))
+```
+
+```{r}
+#Question 3
+#Compute the sample ACF an dthe sample PACF of the original series and further confirm the need for differencing
+par(mfrow=c(2,1))
+acf(ISE.index)
+pacf(ISE.index, main = "PACF")
+#There ais no signicant trends in both acf and pacf plot, and autocorrelations are both in the confident interva except lag 13. 
+```
+```{r}
+# Test the data if it is stationary
+library(tseries)
+adf.test(ISE.index)
+```
+
+
+```{r}
+#Question 4
+#Since no transformation and differencing are needed, we compute the original acf pacf and eacf
+par(mfrow=c(2,2))
+acf(ISE.index)
+pacf(ISE.index)
+eacf(ISE.index)
+#we assume that x at (0,12) and (1,12) are false positive. We suspect that first different could be a white noise process. Thus, we do a runs test to see if first differences are dependt among time.
+runs(ISE.index)
+#The p-value is 0.0811 and there is sufficient evidence to indicate that they are independent
+```
+```{r}
+#use maximum likelyhood to estimate parameter
+fit <- arima(ISE.index,order=c(0,0,0), method ='ML')
+fit
+#Wt = 0.0016 + X_t
+#residuals analyze
+acf(rstandard(fit))
+#test normality of residuals
+par(mfrow=c(2,2))
+shapiro.test(rstandard(fit))
+hist(rstandard(fit))
+plot(rstandard(fit),type='p')
+#test independent of residual
+runs(rstandard(fit))
+qqnorm(rstandard(fit))
+qqline(rstandard(fit))
+```
+
+```{r}
+#Prediction 
+ISE.WN.pred <- predict(fit, n.ahead=10)
+round(ISE.WN.pred$pred, 5)
+round(ISE.WN.pred$se, 5)
+```
+
+```{r}
+#create upper and lower prediction interval bounds
+lower.pi <- ISE.WN.pred$pred - qt(0.975,536)*ISE.WN.pred$se
+upper.pi <- ISE.WN.pred$pred + qt(0.975,536)*ISE.WN.pred$se
+data.frame(day=c(537:546),lower.pi,upper.pi)
+```
+
+```{r}
+plot(ISE.index)
+abline(h=coef(fit))
+lines(y=lower.pi,x=537:546,lwd=2,col="red",lty="dashed")
+lines(y=upper.pi,x=537:546,lwd=2,col="red",lty="dashed")
+```
+
+```{r}
+#overfit 1
+fit1 <- arima(ISE.index, order = c(1,0,0), method = "ML")
+fit1
+par(mfrow=c(1,2))
+hist(rstandard(fit1))
+qqnorm(rstandard(fit1))
+shapiro.test(rstandard(fit1))
+runs(rstandard(fit1))
+```
+
+```{r}
+#overfit 1
+fit2 <- arima(ISE.index, order = c(0,0,1), method = "ML")
+fit2
+par(mfrow=c(1,2))
+hist(rstandard(fit2))
+qqnorm(rstandard(fit2))
+shapiro.test(rstandard(fit2))
+runs(rstandard(fit2))
+```
