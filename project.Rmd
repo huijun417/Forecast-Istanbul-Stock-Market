@@ -1,6 +1,6 @@
 ---
 title: "146 Project"
-author: "Changxin Xie"
+author: "Huijun Hao"
 date: "11/28/2019"
 output:
   html_document: default
